@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<title>Koten's Calendar</title>
+	<link href="stylesheets/style.css" media="all" rel="stylesheet"/>	
+</head>
+<body>
+	<div id="container">
+		<div id="times">
+			<div id="times_inside">
+				<ol>
+		  			<li><strong>9:00</strong> am</li>
+		  			<li>9:30 am</li>
+		  			<li><strong>10:00</strong> am</li>
+		  			<li>10:30 am</li>
+		  			<li><strong>11:00</strong> am</li>
+		  			<li>11:30 am</li>
+		  			<li><strong>12:00</strong> pm</li>
+		  			<li>12:30 pm</li>
+		  			<li><strong>1:00</strong> pm</li>
+		  			<li>1:30 pm</li>
+		  			<li><strong>2:00</strong> pm</li>
+		  			<li>2:30 pm</li>
+		  			<li><strong>3:00</strong> pm</li>
+		  			<li>3:30 pm</li>
+		  			<li><strong>4:00</strong> pm</li>
+		  			<li>4:30 pm</li>
+		  			<li><strong>5:00</strong> pm</li>
+		  			<li>5:30 pm</li>
+		  			<li><strong>6:00</strong> pm</li>
+		  			<li>6:30 pm</li>
+		  			<li><strong>7:00</strong> pm</li>
+		  			<li>7:30 pm</li>
+		  			<li><strong>8:00</strong> pm</li>
+		  			<li>8:30 pm</li>
+		  			<li><strong>9:00</strong> pm</li>
+		  		</ol>
+  			</div>
+		</div>
+		<div id="events">
+			<div id="inside_events">
+				<canvas id="calCanvas">
+				Your browser does not support the HTML5 canvas tag.
+				</canvas>
+			</div>
+		</div>
+	</div>
+</body>
+
+<script type="text/javascript">
+ function Event(event) {    
+  var id;
+  var xaxis; 
+  var mostOverlaps;
+  this.start = event.start;
+  this.end = event.end;
+  this.height = event.end - event.start;
+  this.item = event.item;
+  this.location = event.location;
+
+};
+
+function Container(totalTime) {
+  this.eventsArr = [];
+  this.totalTime = totalTime;
+  this.timespots = [];
+};
+
+
+
+function layOutDay(events) {
+  // make a day calendar 
+  container = new Container(720);
+  
+    sortEvents(events);
+    addId(events);
+    createTimeArray(container.totalTime);
+    addEventsTimeSpot(container.eventsArr, container.timespots);
+    getXaxis(container.eventsArr, container.timespots);
+    calcPosition(container.eventsArr);
+    drawEvents(container.eventsArr);
+
+};
+
+function sortEvents(events){
+    // sort events from earliest start 
+    events.sort(function(a,b) {
+    var result = a.start-b.start;
+      if(result) {
+      return result;  
+      }
+      return a.end - b.end;
+    }); 
+    return events;  
+};
+
+function addId(events){
+  //give each event an id
+    for(var i=0; i<events.length; i++) {
+        event = new Event(events[i]);
+        event.id = i;
+        container.eventsArr.push(event);
+    }
+};
+
+function createTimeArray(totalTime) {
+  //create an array keep track overlap at every minute of the day
+  arr = [];
+  for(var i=0; i<totalTime; i++){
+    arr[i] = [];
+  }
+  container.timespots = arr;
+
+};
+
+function addEventsTimeSpot(events, timespots){
+  // Add eventid to the array of each minute 
+    for(var i =0; i < events.length; i++){
+      event = events[i];
+      for(var j=event.start; j<event.end; j++){
+        timespots[j].push(event.id);
+      }
+    }
+     return timespots;
+};
+
+function getXaxis(events, timespots){
+  //calculate events ovelap
+
+  
+  for(var i =0; i < container.totalTime; i++){
+    var timespotsLength = timespots[i].length
+    var next_xaxis_pos = 0;
+      
+      if(timespotsLength > 1){
+        
+        for(var j=0; j < timespotsLength; j++){
+          event = events[timespots[i][j]];
+            
+            if(!event.mostOverlaps || event.mostOverlaps < timespotsLength){
+                event.mostOverlaps = timespotsLength;
+                
+                if(!event.xaxis_pos){
+                  event.xaxis_pos = next_xaxis_pos;
+                  next_xaxis_pos++;
+                }
+            }
+        }
+
+      } 
+  }
+  return events;
+};
+
+function calcPosition(events){
+  //calculate event width and x-axis
+  for(var i=0; i<events.length; i++){
+
+    event = events[i];
+
+    if(!event.xaxis_pos){
+      event.xaxis_pos = 0;
+    }
+
+    if (!event.mostOverlaps){
+      event.mostOverlaps = 1;
+    }
+    
+    
+    event.recWidth = 600 / (event.mostOverlaps);
+    event.xaxis = event.xaxis_pos * event.recWidth;
+
+  }
+};
+
+function drawEvents(eventsArray) {
+  //draw out each event on the canvas
+  var canvas = document.getElementById("calCanvas");
+  var ctx = canvas.getContext("2d");
+  canvas.width = "600";
+  canvas.height = "700";
+
+    
+    for(var i=0; i < eventsArray.length; i++) {
+        drawEvent(ctx, eventsArray[i], canvas);
+    }     
+};
+
+function drawEvent(ctx, event, canvas){
+  //give the event some style
+  ctx.fillStyle="#ffffff";
+  var yaxis = event.start;
+  var recHeight = event.height;
+  ctx.fillRect(event.xaxis,yaxis,event.recWidth,recHeight);
+  ctx.fillStyle ="#3c64a4";
+  ctx.fillRect(event.xaxis,yaxis,4,recHeight);
+  ctx.font = "bold 8pt tahoma";
+  ctx.fillStyle = '#4c6898';
+  ctx.fillText(event.item, event.xaxis + 8 , yaxis + 14);
+  ctx.font = "bold 6pt tahoma";
+  ctx.fillStyle = '#9f9f9f';
+  ctx.fillText(event.location, event.xaxis + 8 , yaxis + 28);
+
+
+};
+
+
+layOutDay([{start: 30, end: 150, item: "Sample Item",location: "Sample Location"},
+           {start: 540, end: 600, item: "Sample Item", location: "Sample Location"},
+           {start: 560, end: 620, item: "Sample Item", location: "Sample Location"},
+           {start: 610, end: 670, item: "Sample Item", location: "Sample Location"}
+ ]);
+
+
+</script>
+</html>
